@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>bitmark-kernel — live proof</title>
+<style>
+  :root { color-scheme: dark; }
+  body { margin: 0; background: #0c0d10; color: #d7dae0;
+    font: 15px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace; }
+  main { max-width: 56rem; margin: 0 auto; padding: 2.2rem 1.2rem 4rem; }
+  h1 { font-size: 1.7rem; margin: 0 0 .2rem; color: #fff; }
+  h1 small { color: #6c727e; font-weight: normal; font-size: .9rem; }
+  p { color: #aeb3bd; }
+  a { color: #6ea8fe; }
+  table { width: 100%; border-collapse: collapse; margin: 1.4rem 0; }
+  th, td { text-align: left; padding: .5rem .6rem; border-bottom: 1px solid #1d2027; }
+  th { color: #8b909b; font-weight: 600; }
+  td.c { text-align: center; width: 3.2rem; }
+  .ok { color: #4ade80; } .no { color: #f87171; } .na { color: #565b66; }
+  .algo { color: #c0a4f5; }
+  tr.boundary td { color: #9aa0ac; }
+  #verdict { margin-top: 1.5rem; padding: .9rem 1.1rem; border-radius: .5rem;
+    background: #11240f; border: 1px solid #1f6f1a; color: #9be88c; }
+  .note { font-size: .9rem; color: #6c727e; border-left: 2px solid #2a2e37; padding-left: .9rem; }
+</style>
+</head>
+<body>
+<main>
+  <h1>bitmark-kernel <small>live proof</small></h1>
+  <p>The unmodified <a href="https://github.com/bitcoin-kernel/kernel"><code>@bitcoin-kernel/kernel</code></a>
+  consensus engine — loaded right now from the CDN — decoding and validating <b>real Bitmark blocks</b>.
+  Bitmark supplies only a <a href="./schema/chain.js">chain schema</a>; everything else (codec, transactions,
+  scripts, merkle tree) is Bitcoin's, reused as-is.</p>
+
+  <table>
+    <thead><tr>
+      <th>height</th><th>algo</th><th>header</th>
+      <th class="c">decode</th><th class="c">id&nbsp;hash</th><th class="c">merkle</th><th class="c">structure</th>
+    </tr></thead>
+    <tbody id="rows"><tr><td colspan="7" class="na">running…</td></tr></tbody>
+  </table>
+
+  <p id="verdict" hidden></p>
+
+  <p class="note">The <span class="algo">auxpow</span> (merged-mining) and <span class="algo">equihash</span>
+  rows are the known boundary: those blocks wrap the standard block with extra serialized proof-of-work data,
+  so full decode needs a small Bitmark-side unwrap layer. The 80-byte header identity and SHA256d linkage still
+  anchor them. Bitmark's multi-algo difficulty check is an external layer by design — this page proves
+  <em>structure, merkle and scripts</em>, which covers the SHA256d-anchored majority of the chain trustlessly.</p>
+</main>
+
+<script type="module">
+import { Codec, BlockEngine, schemas }
+  from 'https://cdn.jsdelivr.net/gh/bitcoin-kernel/kernel@v0.0.2/packages/kernel/index.js';
+import bitmarkChain from './schema/chain.js';
+
+const codec  = new Codec(schemas.core, schemas.proof);
+const blocks = BlockEngine.fromSchemas(codec, bitmarkChain, schemas.validate, schemas.script, 'bitmark:mainnet');
+
+const fixtures = [
+  { h: 0,       file: 'block0.hex',       algo: 'SHA256D',   kind: 'standard', hash: 'c1fb746e87e89ae75bdec2ef0639a1f6786744639ce3d0ece1dcf979b79137cb' },
+  { h: 1,       file: 'block1.hex',       algo: 'SHA256D',   kind: 'standard', hash: 'eb114fd075298dd4f113a3af621c812d3f2b1ffda1f20002dbd52179bf62d0a9' },
+  { h: 1200000, file: 'block1200000.hex', algo: 'X17',       kind: 'standard', hash: '7e3c4277aef41f2c221b6cf94363a20268dbca6f94d8544cd9a915ca89759119' },
+  { h: 700000,  file: 'block700000.hex',  algo: 'LYRA2REv2', kind: 'auxpow',   hash: '90320f2e6f73e0a4fcf3bcc799ad1615082f274535e5b44d70d517fdfcc07f4f' },
+  { h: 2398000, file: 'block2398000.hex', algo: 'EQUIHASH',  kind: 'equihash', hash: '000006af14784999b84179f4b42ab35abc50f4559cbd4239e2bc99166604aee8' },
+];
+
+const C = (v) => v === true ? '<td class="c ok">✓</td>' : v === false ? '<td class="c no">✗</td>' : '<td class="c na">–</td>';
+const rows = document.getElementById('rows');
+let html = '', standardOk = true;
+
+for (const fx of fixtures) {
+  const hex = (await (await fetch(`./fixtures/${fx.file}`)).text()).trim();
+  let decode = false, hashOk = null, merkleOk = null, structOk = null;
+  try {
+    const block = codec.decode('Block', hex);
+    decode = true;
+    hashOk = codec.blockHash(block.header) === fx.hash;
+    merkleOk = codec.merkleRoot(block.transactions.map((tx) => codec.txid(tx))) === block.header.merkleRoot;
+    structOk = blocks.validateBlockStructure(block).ok;
+  } catch (e) { decode = false; }
+  if (fx.kind === 'standard') standardOk &&= (decode && hashOk && merkleOk && structOk);
+  html += `<tr class="${fx.kind === 'standard' ? '' : 'boundary'}">`
+    + `<td>${fx.h.toLocaleString()}</td><td class="algo">${fx.algo}</td><td>${fx.kind}</td>`
+    + C(decode) + C(hashOk) + C(merkleOk) + C(structOk) + '</tr>';
+}
+rows.innerHTML = html;
+
+const v = document.getElementById('verdict');
+v.hidden = false;
+v.textContent = standardOk
+  ? '✅ Standard-header Bitmark blocks (any PoW algo, multi-transaction) fully validate through the unmodified Bitcoin engine — live, in your browser.'
+  : '❌ A standard-header block failed to validate.';
+if (!standardOk) { v.style.background = '#241010'; v.style.borderColor = '#6f1a1a'; v.style.color = '#f0a0a0'; }
+</script>
+</body>
+</html>
