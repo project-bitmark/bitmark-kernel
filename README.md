@@ -3,36 +3,42 @@
 An independent, zero-build browser node for **[Bitmark](https://bitmark.rocks/)** — the
 honest, no-premine chain live since 13 July 2014.
 
-It does **not** reimplement consensus. Bitmark's wire format is byte-for-byte Bitcoin,
-so this repo reuses the published [`@bitcoin-kernel/kernel`](https://github.com/bitcoin-kernel/kernel)
-engine unchanged and injects **only a Bitmark chain schema** (`schema/chain.js`). Same
-codec, transactions, scripts and merkle tree; only the network parameters differ.
+It does **not** reimplement consensus. Bitmark's transactions, scripts and merkle tree
+are byte-for-byte Bitcoin, so this repo reuses the published
+[`@bitcoin-kernel/kernel`](https://github.com/bitcoin-kernel/kernel) engine unchanged
+and adds only two small things:
+
+- **`schema/chain.js`** — the Bitmark chain parameters (~50 lines), injected as the network.
+- **`unwrap.js`** — a dependency-free shim that strips Bitmark's multi-algo proof-of-work
+  serialization (equihash's extended header, the auxpow merged-mining blob) back to a
+  standard block before it reaches the engine.
 
 This keeps the two projects cleanly separated: nothing Bitmark lives in bitcoin-kernel,
 and Bitmark consumes bitcoin-kernel exactly as it is published.
 
 ## Proof
 
-`proof/decode-block.mjs` runs real Bitmark blocks (genesis + block 1, in `fixtures/`)
-through the kernel with the `bitmark:mainnet` schema injected and confirms:
+`proof/decode-block.mjs` runs real Bitmark blocks across all eight PoW algorithms
+(`fixtures/`, including a merged-mining auxpow block and an equihash block) through the
+kernel with the `bitmark:mainnet` schema injected, and confirms for **every** block:
 
-- the codec reproduces the node's **block hash** exactly,
+- the recomputed **block hash** matches the node's (incl. equihash `GetHashE`),
 - the **merkle root** matches the header,
 - all structural consensus rules (coinbase, sigops, weight, duplicates, …) pass.
 
 ```
-node proof/decode-block.mjs    # ✅ PROOF HOLDS
+node proof/decode-block.mjs    # ✅ PROOF HOLDS — all algos, auxpow + equihash
 ```
 
-## Scope: structure, not PoW
+## Scope: structure, merkle, scripts — not difficulty
 
-The kernel validates **structure, merkle root, transactions and scripts** —
-PoW-independently. This covers the SHA256d-anchored majority of Bitmark history
-without trusting anyone. What it deliberately does **not** do is validate Bitmark's
-**multi-algorithm proof-of-work** (8 algorithms: scrypt, sha256d, yescrypt, argon2d,
-x17, lyra2rev2, equihash, cryptonight). Difficulty/PoW is an external policy layer;
-the exotic-PoW headers (~8% of blocks) are verified by linkage + checkpoints, not by
-re-running each algorithm. See the bitcoin-kernel architecture for the same split.
+The engine validates **structure, merkle root, transactions and scripts** for every
+block. What stays **external** by design is multi-algo **difficulty**: re-running the
+eight PoW hash functions (scrypt, sha256d, yescrypt, argon2, x17, lyra2rev2, equihash,
+cryptonight) to check each header meets target. The block hashes still chain by SHA256d
+linkage (and equihash's `GetHashE`), so blocks are anchored and ordered; difficulty
+verification is a separate policy layer, the same split the bitcoin-kernel architecture
+draws.
 
 ## Bitmark mainnet (from `bitmark/src/kernel/chainparams.cpp`)
 
