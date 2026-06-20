@@ -3,52 +3,115 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>bitmark-kernel — live proof</title>
+<title>bitmark·kernel — Bitmark on Bitcoin's engine</title>
 <style>
-  :root { color-scheme: dark; }
-  body { margin: 0; background: #0c0d10; color: #d7dae0;
-    font: 15px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace; }
-  main { max-width: 56rem; margin: 0 auto; padding: 2.2rem 1.2rem 4rem; }
-  h1 { font-size: 1.7rem; margin: 0 0 .2rem; color: #fff; }
-  h1 small { color: #6c727e; font-weight: normal; font-size: .9rem; }
-  p { color: #aeb3bd; }
-  a { color: #6ea8fe; }
-  table { width: 100%; border-collapse: collapse; margin: 1.4rem 0; }
-  th, td { text-align: left; padding: .5rem .6rem; border-bottom: 1px solid #1d2027; }
-  th { color: #8b909b; font-weight: 600; }
-  td.c { text-align: center; width: 3.2rem; }
-  .ok { color: #4ade80; } .no { color: #f87171; } .na { color: #565b66; }
-  .algo { color: #c0a4f5; }
-  tr.boundary td { color: #9aa0ac; }
-  #verdict { margin-top: 1.5rem; padding: .9rem 1.1rem; border-radius: .5rem;
-    background: #11240f; border: 1px solid #1f6f1a; color: #9be88c; }
-  .note { font-size: .9rem; color: #6c727e; border-left: 2px solid #2a2e37; padding-left: .9rem; }
+  :root{--bg:#fff;--fg:#16181d;--mut:#5b6470;--bd:#e6e8eb;--pan:#fafbfc;--ac:#e8830c;--ac2:#0969da;--good:#1a7f37;--bad:#cf222e;--mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+  *{box-sizing:border-box}html{scroll-behavior:smooth}
+  body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.6 system-ui,-apple-system,"Segoe UI",sans-serif;-webkit-font-smoothing:antialiased}
+  a{color:var(--ac2);text-decoration:none}a:hover{text-decoration:underline}
+  .wrap{max-width:940px;margin:0 auto;padding:0 1.5rem}
+  nav{border-bottom:1px solid var(--bd)}
+  nav .wrap{display:flex;align-items:center;gap:1.3rem;height:56px}
+  nav .brand{font-weight:700;letter-spacing:-.3px;margin-right:auto;color:var(--fg);font-size:1rem;text-decoration:none}nav .brand b{color:var(--ac)}
+  nav a{color:var(--mut);font-size:.9rem;font-weight:500}nav a.on{color:var(--fg)}
+  header.hero{padding:3.2rem 0 1.2rem;text-align:center}
+  h1{font-size:2.7rem;line-height:1.05;letter-spacing:-1.2px;margin:0;font-weight:800}
+  .sub{font-size:1.14rem;color:#37414d;margin:1rem auto 0;max-width:40rem;line-height:1.5}
+  #runner{margin:1.4rem 0 0;border:1px solid var(--bd);border-radius:16px;overflow:hidden;box-shadow:0 8px 30px rgba(16,18,29,.06)}
+  .rhead{padding:1.4rem;text-align:center;border-bottom:1px solid var(--bd);background:var(--pan)}
+  .summary{font-size:1.05rem;color:var(--mut)}
+  .summary .big{font:800 1.9rem var(--mono);letter-spacing:-1px;color:var(--good);vertical-align:-2px}
+  .summary .big.bad{color:var(--bad)}
+  #status{margin:.5rem 0 0;font-size:.92rem;color:var(--mut)}#status b{color:var(--fg)}
+  .spin{display:inline-block;width:.8em;height:.8em;border:2px solid var(--bd);border-top-color:var(--ac);border-radius:50%;animation:sp .7s linear infinite;vertical-align:-1px}
+  @keyframes sp{to{transform:rotate(360deg)}}
+  .runbody{opacity:0;transition:opacity .3s}#runner.ready .runbody{opacity:1}
+  table{width:100%;border-collapse:collapse;font-size:.93rem}
+  thead th{text-align:left;padding:.7rem 1.4rem;color:var(--mut);font-weight:600;font-size:.82rem;text-transform:uppercase;letter-spacing:.04em;border-bottom:1px solid var(--bd)}
+  thead th.c{text-align:center;width:4.2rem}
+  tbody td{padding:.65rem 1.4rem;border-top:1px solid var(--bd)}
+  tbody td.c{text-align:center;font:700 .95rem var(--mono)}
+  tbody tr:hover{background:var(--pan)}
+  .h{font:600 .95rem var(--mono);color:var(--fg)}
+  .algo{font:700 .82rem var(--mono);color:var(--ac)}
+  .kind{font:.82rem var(--mono);color:var(--mut)}
+  tr.boundary td.kind,tr.boundary td.h{color:#8a909b}
+  .ok{color:var(--good)}.no{color:var(--bad)}.na{color:#b8bdc6}
+  .note{margin:1.3rem 0 0;padding:.9rem 1.1rem;background:var(--pan);border:1px solid var(--bd);border-radius:10px;font-size:.9rem;color:var(--mut);line-height:1.55}
+  .note b{color:var(--fg)}.note .algo{font-size:.82rem}
+  .how{margin:3rem 0 0}
+  .how3{display:grid;grid-template-columns:repeat(3,1fr);gap:1.6rem;margin-top:1.2rem}
+  .how3 h3{margin:0 0 .35rem;font-size:1.05rem;letter-spacing:-.2px}
+  .how3 p{margin:0;color:var(--mut);font-size:.92rem;line-height:1.55}
+  @media(max-width:640px){.how3{grid-template-columns:1fr;gap:1.1rem}}
+  footer{margin-top:3rem;padding:2rem 0;border-top:1px solid var(--bd);color:var(--mut);font-size:.85rem}
+  footer .links{display:flex;gap:1.4rem;flex-wrap:wrap;margin-bottom:.9rem}
+  .fnote{font:.8rem/1.6 var(--mono);color:var(--mut);max-width:54rem}
+  @media(max-width:600px){h1{font-size:2.1rem}}
 </style>
 </head>
 <body>
-<main>
-  <h1>bitmark-kernel <small>live proof</small></h1>
-  <p>The unmodified <a href="https://github.com/bitcoin-kernel/kernel"><code>@bitcoin-kernel/kernel</code></a>
-  consensus engine — loaded right now from the CDN — decoding and validating <b>real Bitmark blocks</b>.
-  Bitmark supplies only a <a href="./schema/chain.js">chain schema</a>; everything else (codec, transactions,
-  scripts, merkle tree) is Bitcoin's, reused as-is.</p>
+<nav><div class="wrap">
+  <a href="./index.html" class="brand">bitmark<b>·</b>kernel</a>
+  <a href="./index.html" class="on">Live proof</a>
+  <a href="https://bitcoin-kernel.com">bitcoin-kernel ↗</a>
+  <a href="https://bitmark.rocks">bitmark.rocks ↗</a>
+  <a href="https://github.com/project-bitmark/bitmark-kernel">Source ↗</a>
+</div></nav>
 
-  <table>
-    <thead><tr>
-      <th>height</th><th>algo</th><th>header</th>
-      <th class="c">decode</th><th class="c">id&nbsp;hash</th><th class="c">merkle</th><th class="c">structure</th>
-    </tr></thead>
-    <tbody id="rows"><tr><td colspan="7" class="na">running…</td></tr></tbody>
-  </table>
+<header class="hero"><div class="wrap">
+  <h1>Bitmark, on Bitcoin's engine.</h1>
+  <p class="sub">Bitmark's blocks are Bitcoin's blocks with different rules at the edges. This page loads the
+  unmodified <a href="https://bitcoin-kernel.com">bitcoin-kernel</a> consensus engine live from the CDN and
+  validates real Bitmark blocks in your browser — Bitmark supplies only a
+  <a href="./schema/chain.js">chain schema</a>, nothing else.</p>
+</div></header>
 
-  <p id="verdict" hidden></p>
+<main class="wrap">
+  <div id="runner">
+    <div class="rhead">
+      <div class="summary"><span id="big" class="big">·</span> <span id="bigtxt">standard-header blocks validated</span></div>
+      <div id="status"><span class="spin"></span> loading the engine from jsDelivr…</div>
+    </div>
+    <div class="runbody">
+      <table>
+        <thead><tr>
+          <th>height</th><th>algo</th><th>header</th>
+          <th class="c">decode</th><th class="c">id&nbsp;hash</th><th class="c">merkle</th><th class="c">structure</th>
+        </tr></thead>
+        <tbody id="rows"></tbody>
+      </table>
+    </div>
+  </div>
 
-  <p class="note">The <span class="algo">auxpow</span> (merged-mining) and <span class="algo">equihash</span>
-  rows are the known boundary: those blocks wrap the standard block with extra serialized proof-of-work data,
-  so full decode needs a small Bitmark-side unwrap layer. The 80-byte header identity and SHA256d linkage still
-  anchor them. Bitmark's multi-algo difficulty check is an external layer by design — this page proves
-  <em>structure, merkle and scripts</em>, which covers the SHA256d-anchored majority of the chain trustlessly.</p>
+  <p class="note">The <span class="algo">auxpow</span> (merged-mining) and <span class="algo">equihash</span> rows
+  are the known boundary: those blocks wrap the standard block with extra serialized proof-of-work data, so full
+  decode needs a small Bitmark-side unwrap layer. The 80-byte header identity and SHA256d linkage still anchor them.
+  Bitmark's multi-algo difficulty check is an external layer by design — this page proves <b>structure, merkle and
+  scripts</b>, which covers the SHA256d-anchored majority of the chain trustlessly.</p>
+
+  <section class="how">
+    <div class="how3">
+      <div><h3>One schema, nothing else</h3><p>Bitmark provides ~50 lines of chain parameters
+        (<code>schema/chain.js</code>). Codec, transactions, scripts and the merkle tree are Bitcoin's, reused byte-for-byte.</p></div>
+      <div><h3>Loaded live from the CDN</h3><p>The engine is pulled at runtime from
+        <code>@bitcoin-kernel/kernel@v0.0.2</code> on jsDelivr. No fork, no copy — the same published code that runs bitcoin-kernel.com.</p></div>
+      <div><h3>An honest boundary</h3><p>Seven of eight PoW algorithms use a standard 80-byte header and validate today.
+        Merged-mining and equihash need a small unwrap; difficulty itself stays an external layer.</p></div>
+    </div>
+  </section>
 </main>
+
+<footer><div class="wrap">
+  <div class="links">
+    <a href="https://github.com/project-bitmark/bitmark-kernel">This page's source</a>
+    <a href="https://cdn.jsdelivr.net/gh/bitcoin-kernel/kernel@v0.0.2/packages/kernel/codec/blocks.js">The code that validates the blocks</a>
+    <a href="https://github.com/bitcoin-kernel/kernel">bitcoin-kernel engine</a>
+    <a href="https://bitmark.rocks">Bitmark</a>
+  </div>
+  <p class="fnote">The five blocks are real, fetched from a Bitmark node and committed to this repository. The engine is
+  loaded from the CDN at runtime; everything else runs in your browser with no other external calls.</p>
+</div></footer>
 
 <script type="module">
 import { Codec, BlockEngine, schemas }
@@ -66,9 +129,9 @@ const fixtures = [
   { h: 2398000, file: 'block2398000.hex', algo: 'EQUIHASH',  kind: 'equihash', hash: '000006af14784999b84179f4b42ab35abc50f4559cbd4239e2bc99166604aee8' },
 ];
 
-const C = (v) => v === true ? '<td class="c ok">✓</td>' : v === false ? '<td class="c no">✗</td>' : '<td class="c na">–</td>';
+const cell = (v) => v === true ? '<td class="c ok">✓</td>' : v === false ? '<td class="c no">✗</td>' : '<td class="c na">–</td>';
 const rows = document.getElementById('rows');
-let html = '', standardOk = true;
+let html = '', standardTotal = 0, standardPass = 0;
 
 for (const fx of fixtures) {
   const hex = (await (await fetch(`./fixtures/${fx.file}`)).text()).trim();
@@ -80,19 +143,24 @@ for (const fx of fixtures) {
     merkleOk = codec.merkleRoot(block.transactions.map((tx) => codec.txid(tx))) === block.header.merkleRoot;
     structOk = blocks.validateBlockStructure(block).ok;
   } catch (e) { decode = false; }
-  if (fx.kind === 'standard') standardOk &&= (decode && hashOk && merkleOk && structOk);
+  if (fx.kind === 'standard') { standardTotal++; if (decode && hashOk && merkleOk && structOk) standardPass++; }
   html += `<tr class="${fx.kind === 'standard' ? '' : 'boundary'}">`
-    + `<td>${fx.h.toLocaleString()}</td><td class="algo">${fx.algo}</td><td>${fx.kind}</td>`
-    + C(decode) + C(hashOk) + C(merkleOk) + C(structOk) + '</tr>';
+    + `<td class="h">${fx.h.toLocaleString()}</td><td class="algo">${fx.algo}</td><td class="kind">${fx.kind}</td>`
+    + cell(decode) + cell(hashOk) + cell(merkleOk) + cell(structOk) + '</tr>';
 }
 rows.innerHTML = html;
+document.getElementById('runner').classList.add('ready');
 
-const v = document.getElementById('verdict');
-v.hidden = false;
-v.textContent = standardOk
-  ? '✅ Standard-header Bitmark blocks (any PoW algo, multi-transaction) fully validate through the unmodified Bitcoin engine — live, in your browser.'
-  : '❌ A standard-header block failed to validate.';
-if (!standardOk) { v.style.background = '#241010'; v.style.borderColor = '#6f1a1a'; v.style.color = '#f0a0a0'; }
+const ok = standardPass === standardTotal;
+const big = document.getElementById('big');
+big.textContent = `${standardPass} / ${standardTotal}`;
+big.className = 'big' + (ok ? '' : ' bad');
+document.getElementById('bigtxt').textContent = ok
+  ? 'standard-header blocks validated through the unmodified Bitcoin engine — live, in your browser.'
+  : 'standard-header blocks validated.';
+document.getElementById('status').innerHTML = ok
+  ? '<b>All standard-header Bitmark blocks pass</b> — any PoW algorithm, multi-transaction included.'
+  : 'A standard-header block failed to validate.';
 </script>
 </body>
 </html>

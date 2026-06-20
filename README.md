@@ -47,9 +47,11 @@ re-running each algorithm. See the bitcoin-kernel architecture for the same spli
 
 ## Hosting
 
-Published from **gh-pages**, like every other piece of the stack, served at
-**bitmark.rocks** and via jsDelivr — mirroring how bitcoin-kernel ships from gh-pages
-to bitcoin-kernel.com.
+Published from the **gh-pages** branch, like every other piece of the stack. The live
+proof runs at **https://project-bitmark.github.io/bitmark-kernel/** and packages are
+reachable via jsDelivr (`cdn.jsdelivr.net/gh/project-bitmark/bitmark-kernel@<ver>/...`).
+A dedicated custom domain can come later; the apex `bitmark.rocks` belongs to the
+explorer site and is intentionally left untouched.
 
 ## License
 
